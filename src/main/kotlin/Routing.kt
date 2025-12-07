@@ -1,21 +1,15 @@
 package org.bargsten
 
-import Validated.Companion.validWhen
-import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.compression.*
-import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.plugins.defaultheaders.*
-import io.ktor.server.plugins.openapi.*
-import io.ktor.server.plugins.requestvalidation.ValidationResult
 import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
-import validateAll
+import validated
 
 @Serializable
 data class CustomerReq(val id: Int, val firstName: String, val lastName: String)
+data class Customer(val id: Int, val firstName: String, val lastName: String)
 
 
 fun Application.configureRouting() {
@@ -26,11 +20,11 @@ fun Application.configureRouting() {
         post("/abc") {
 
             val body = call.receive<CustomerReq>()
-            validateAll(
-                validWhen<String>({ body.id > 0 }, { "ERROR" })
-            )
+            val customer = validated {
+                check(body.id > 0) { "error" }
 
-
+                Customer(body.id, body.firstName, body.lastName)
+            }
         }
     }
 }

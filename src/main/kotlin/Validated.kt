@@ -31,8 +31,6 @@ sealed class Validated<out E, out A> {
         is Invalid -> this
     }
 
-    fun <B> mapTo(value: B): Validated<E, B> = map { value }
-
     fun <F> mapErrors(f: (List<E>) -> List<F>): Validated<F, A> = when (this) {
         is Valid -> this
         is Invalid -> Invalid(f(errors))
@@ -43,6 +41,10 @@ sealed class Validated<out E, out A> {
         is Invalid -> this
     }
 
+    fun recover(f: (List<E>) -> @UnsafeVariance A): Validated<Nothing, A> = when (this) {
+        is Valid -> this
+        is Invalid -> Valid(f(errors))
+    }
 
     val isValid: Boolean get() = this is Valid
     val isInvalid: Boolean get() = this is Invalid
@@ -86,78 +88,113 @@ fun <E> validateAll(vararg validations: Validated<E, *>): Validated<E, Unit> {
 }
 
 
-class ValidationScope<E>(private val errors: MutableList<E> = mutableListOf()) {
-    fun ensure(condition: Boolean, error: () -> E) {
-        if (!condition) errors.add(error())
+class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) {
+    val errors: List<E> get() = _errors
+
+    fun check(condition: Boolean, error: () -> E) {
+        if (!condition) _errors.add(error())
     }
 
-    fun <A> ensureNotNull(value: A?, error: () -> E): A? {
-        if (value == null) errors.add(error())
-        return value
+    fun check(condition: () -> Boolean, error: () -> E) {
+        if (!condition()) _errors.add(error())
     }
 
-    fun ensure(validation: Validated<E, *>) {
-        if (validation is Validated.Invalid) errors.addAll(validation.errors)
+    fun check(validation: Validated<E, *>) {
+        if (validation is Validated.Invalid) _errors.addAll(validation.errors)
+    }
+
+
+    fun <A> A?.checkNotNull(error: () -> E): A? {
+        if (this == null) _errors.add(error())
+        return this
+    }
+
+    fun <A> A.check(condition: (A) -> Boolean, error: () -> E): A {
+        if (!condition(this)) _errors.add(error())
+        return this
+    }
+
+    fun <A> A?.check(condition: (A) -> Boolean, error: () -> E): A? {
+        if (this != null && !condition(this)) _errors.add(error())
+        return this
+    }
+
+
+    fun <A> A?.demandNotNull(error: () -> E): A {
+        if (this == null) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+        return this
+    }
+
+    fun <A> A.demand(condition: (A) -> Boolean, error: () -> E): A {
+        if (!condition(this)) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+        return this
+    }
+
+    fun demand(condition: () -> Boolean, error: () -> E) {
+        if (!condition()) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+    }
+
+    fun demand(condition: Boolean, error: () -> E) {
+        if (!condition) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+    }
+
+
+    fun <A> checkValue(validated: Validated<E, A>): A? = when (validated) {
+        is Validated.Valid -> validated.value
+        is Validated.Invalid -> {
+            _errors.addAll(validated.errors)
+            null
+        }
+    }
+
+    fun <A> demandValue(validated: Validated<E, A>): A = when (validated) {
+        is Validated.Valid -> validated.value
+        is Validated.Invalid -> {
+            _errors.addAll(validated.errors)
+            throw ValidationException()
+        }
     }
 
 
     internal fun build(): Validated<E, Unit> =
-        if (errors.isEmpty()) Validated.unit() else Validated.invalid(errors)
+        if (_errors.isEmpty()) Validated.unit() else Validated.invalid(_errors)
 
     internal fun <A> buildWith(value: A): Validated<E, A> =
-        if (errors.isEmpty()) Validated.valid(value) else Validated.invalid(errors)
-
-
+        if (_errors.isEmpty()) Validated.valid(value) else Validated.invalid(_errors)
 }
 
-class ValidationException(val errors: List<Any?>) : Exception() {
+private class ValidationException : Exception() {
     override fun fillInStackTrace() = this
 }
 
-fun <E> validate(block: ValidationScope<E>.() -> Unit): Validated<E, Unit> =
-    try {
-        ValidationScope<E>().apply(block).build()
-    } catch (e: ValidationException) {
-        @Suppress("UNCHECKED_CAST")
-        Validated.invalid(e.errors as List<E>)
-    }
-
-fun <E, A> validateTo(block: ValidationScope<E>.() -> A): Validated<E, A> {
+fun <E> validate(block: ValidationScope<E>.() -> Unit): Validated<E, Unit> {
     val scope = ValidationScope<E>()
     return try {
-        scope.buildWith(scope.block())
+        scope.apply(block).build()
     } catch (e: ValidationException) {
         @Suppress("UNCHECKED_CAST")
-        Validated.invalid(e.errors as List<E>)
+        Validated.invalid(scope.errors)
     }
 }
 
-
-
-fun <E> validate(block: ValidationScope<E>.() -> Unit): Validated<E, Unit> =
-    ValidationScope<E>().apply(block).build()
-
-fun <E, A> validateWith(block: ValidationScope<E>.() -> A): Validated<E, A> {
-    val scope = ValidationScope<E>()
-    val result = scope.block()
-    return scope.buildWith(result)
-}
-
-
-fun <E> validate(block: ValidationScope<E>.() -> Unit): Validated<E, Unit> =
-    try {
-        ValidationScope<E>().apply(block).build()
-    } catch (e: ValidationException<*>) {
-        @Suppress("UNCHECKED_CAST")
-        Validated.invalid(e.errors as List<E>)
-    }
-
-fun <E, A> validating(block: ValidationScope<E>.() -> A): Validated<E, A> {
+fun <E, A> validated(block: ValidationScope<E>.() -> A): Validated<E, A> {
     val scope = ValidationScope<E>()
     return try {
         scope.buildWith(scope.block())
-    } catch (e: ValidationException<*>) {
+    } catch (_: ValidationException) {
         @Suppress("UNCHECKED_CAST")
-        Validated.invalid(e.errors as List<E>)
+        Validated.invalid(scope.errors)
     }
 }
