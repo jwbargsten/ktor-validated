@@ -114,6 +114,7 @@ class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) 
         return this
     }
 
+    @JvmName("checkNullable")
     fun <A> A?.check(condition: (A) -> Boolean, error: () -> E): A? {
         if (this != null && !condition(this)) _errors.add(error())
         return this
