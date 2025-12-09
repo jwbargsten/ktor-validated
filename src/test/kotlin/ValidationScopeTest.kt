@@ -1,12 +1,11 @@
 import io.kotest.core.spec.style.FunSpec
-import org.bargsten.Customer
 import org.bargsten.CustomerReq
 
 class ValidationScopeTest : FunSpec({
 
     test("scope") {
         val req = CustomerReq(1, "John", "Doe")
-        val result = validated {
+        val result = validateWithResult {
             // shortcut/early exit
             demand(req.id > 0) { "Customer ID must be positive" }
             // accumulative

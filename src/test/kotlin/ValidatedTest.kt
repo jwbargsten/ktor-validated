@@ -274,7 +274,7 @@ class ValidatedTest : FunSpec({
 
     context("ValidationScope checkNotNull") {
         test("checkNotNull with non-null returns value") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 val pokemon: Pokemon? = Pokemon(25, "Pikachu", 50)
                 val checked = pokemon.checkNotNull { "Pokemon is null" }
                 checked!!
@@ -283,7 +283,7 @@ class ValidatedTest : FunSpec({
         }
 
         test("checkNotNull with null adds error") {
-            val result = validated<String, Pokemon?> {
+            val result = validateWithResult<String, Pokemon?> {
                 val pokemon: Pokemon? = null
                 pokemon.checkNotNull { "No Pokemon found in party" }
             }
@@ -293,21 +293,21 @@ class ValidatedTest : FunSpec({
 
     context("ValidationScope value check extension") {
         test("check on value with passing condition") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 Pokemon(25, "Pikachu", 50).check({ it.level > 10 }) { "Level too low" }
             }
             result shouldBe valid(Pokemon(25, "Pikachu", 50))
         }
 
         test("check on value with failing condition") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 Pokemon(25, "Pikachu", 5).check({ it.level > 10 }) { "Level too low to evolve" }
             }
             result shouldBe Validated.invalid(listOf("Level too low to evolve"))
         }
 
         test("check on nullable with null skips check") {
-            val result = validated<String, Pokemon?> {
+            val result = validateWithResult<String, Pokemon?> {
                 val pokemon: Pokemon? = null
                 pokemon.check({ it.level > 10 }) { "Level too low" }
             }
@@ -315,7 +315,7 @@ class ValidatedTest : FunSpec({
         }
 
         test("check on nullable with non-null checks condition") {
-            val result = validated<String, Pokemon?> {
+            val result = validateWithResult<String, Pokemon?> {
                 val pokemon: Pokemon? = Pokemon(25, "Pikachu", 5)
                 pokemon.check({ it.level > 10 }) { "Level too low" }
             }
@@ -325,7 +325,7 @@ class ValidatedTest : FunSpec({
 
     context("ValidationScope demand") {
         test("demand with true condition continues") {
-            val result = validated<String, String> {
+            val result = validateWithResult<String, String> {
                 demand(true) { "Should not fail" }
                 "Pikachu caught!"
             }
@@ -334,7 +334,7 @@ class ValidatedTest : FunSpec({
 
         test("demand with false condition short-circuits") {
             var reached = false
-            val result = validated<String, String> {
+            val result = validateWithResult<String, String> {
                 demand(false) { "Pokeball missed!" }
                 reached = true
                 "Should not reach"
@@ -344,7 +344,7 @@ class ValidatedTest : FunSpec({
         }
 
         test("demand with lambda condition") {
-            val result = validated<String, String> {
+            val result = validateWithResult<String, String> {
                 demand({ false }) { "Lambda failed" }
                 "Unreachable"
             }
@@ -352,7 +352,7 @@ class ValidatedTest : FunSpec({
         }
 
         test("demand on value with passing condition") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 Pokemon(25, "Pikachu", 50).demand({ it.level >= 50 }) { "Not ready for Elite Four" }
             }
             result shouldBe valid(Pokemon(25, "Pikachu", 50))
@@ -360,7 +360,7 @@ class ValidatedTest : FunSpec({
 
         test("demand on value with failing condition short-circuits") {
             var reached = false
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 Pokemon(25, "Pikachu", 10).demand({ it.level >= 50 }) { "Not ready for Elite Four" }
                 reached = true
                 Pokemon(25, "Pikachu", 10)
@@ -372,7 +372,7 @@ class ValidatedTest : FunSpec({
 
     context("ValidationScope demandNotNull") {
         test("demandNotNull with non-null continues") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 val pokemon: Pokemon? = Pokemon(151, "Mew", 100)
                 pokemon.demandNotNull { "Mew not found" }
             }
@@ -381,7 +381,7 @@ class ValidatedTest : FunSpec({
 
         test("demandNotNull with null short-circuits") {
             var reached = false
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 val pokemon: Pokemon? = null
                 val mew = pokemon.demandNotNull { "Mew not found" }
                 reached = true
@@ -394,14 +394,14 @@ class ValidatedTest : FunSpec({
 
     context("ValidationScope checkValue") {
         test("checkValue with valid returns value") {
-            val result = validated<String, Pokemon?> {
+            val result = validateWithResult<String, Pokemon?> {
                 checkValue(valid(Pokemon(25, "Pikachu", 50)))
             }
             result shouldBe valid(Pokemon(25, "Pikachu", 50))
         }
 
         test("checkValue with invalid adds errors and returns null") {
-            val result = validated<String, Pokemon?> {
+            val result = validateWithResult<String, Pokemon?> {
                 checkValue(Validated.invalid<String>(listOf("Error1", "Error2")))
             }
             result shouldBe Validated.invalid(listOf("Error1", "Error2"))
@@ -410,7 +410,7 @@ class ValidatedTest : FunSpec({
 
     context("ValidationScope demandValue") {
         test("demandValue with valid returns value") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 demandValue(valid(Pokemon(143, "Snorlax", 30)))
             }
             result shouldBe valid(Pokemon(143, "Snorlax", 30))
@@ -418,7 +418,7 @@ class ValidatedTest : FunSpec({
 
         test("demandValue with invalid short-circuits") {
             var reached = false
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 val pokemon = demandValue<Pokemon>(Validated.invalidOne("Snorlax is blocking the way"))
                 reached = true
                 pokemon
@@ -448,7 +448,7 @@ class ValidatedTest : FunSpec({
 
     context("validated function") {
         test("validated returns wrapped value on success") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 check(true) { "No error" }
                 Pokemon(94, "Gengar", 45)
             }
@@ -456,7 +456,7 @@ class ValidatedTest : FunSpec({
         }
 
         test("validated returns errors on failure") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 check(false) { "Ghost type needed" }
                 check(false) { "Level 25 required" }
                 Pokemon(94, "Gengar", 45)
@@ -465,7 +465,7 @@ class ValidatedTest : FunSpec({
         }
 
         test("validated short-circuits on demand failure") {
-            val result = validated<String, Pokemon> {
+            val result = validateWithResult<String, Pokemon> {
                 check(false) { "First error collected" }
                 demand(false) { "Demand failed - stops here" }
                 check(false) { "Never reached" }

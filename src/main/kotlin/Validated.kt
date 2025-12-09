@@ -190,7 +190,7 @@ fun <E> validate(block: ValidationScope<E>.() -> Unit): Validated<E, Unit> {
     }
 }
 
-fun <E, A> validated(block: ValidationScope<E>.() -> A): Validated<E, A> {
+fun <E, A> validateWithResult(block: ValidationScope<E>.() -> A): Validated<E, A> {
     val scope = ValidationScope<E>()
     return try {
         scope.buildWith(scope.block())

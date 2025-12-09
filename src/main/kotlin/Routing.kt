@@ -5,7 +5,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
-import validated
+import validateWithResult
 
 @Serializable
 data class CustomerReq(val id: Int, val firstName: String, val lastName: String)
@@ -20,7 +20,7 @@ fun Application.configureRouting() {
         post("/abc") {
 
             val body = call.receive<CustomerReq>()
-            val customer = validated {
+            val customer = validateWithResult {
                 check(body.id > 0) { "error" }
 
                 Customer(body.id, body.firstName, body.lastName)
