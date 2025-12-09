@@ -1,3 +1,8 @@
+package nl.edsn.validation
+
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+
 sealed class Validated<out E, out A> {
     data class Valid<A>(val value: A) : Validated<Nothing, A>()
     data class Invalid<E>(val errors: List<E>) : Validated<E, Nothing>()
@@ -91,12 +96,12 @@ fun <E> validateAll(vararg validations: Validated<E, *>): Validated<E, Unit> {
 class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) {
     val errors: List<E> get() = _errors
 
-    fun ensure(condition: Boolean, error: () -> E) {
-        if (!condition) _errors.add(error())
+    fun ensure(predicate: Boolean, error: () -> E) {
+        if (!predicate) _errors.add(error())
     }
 
-    fun ensure(condition: () -> Boolean, error: () -> E) {
-        if (!condition()) _errors.add(error())
+    fun ensure(predicate: () -> Boolean, error: () -> E) {
+        if (!predicate()) _errors.add(error())
     }
 
     fun ensure(validation: Validated<E, *>) {
@@ -104,24 +109,58 @@ class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) 
     }
 
 
-    fun <A> A?.ensureNotNull(error: () -> E): A? {
+    @JvmName("ensureNotNullFluent")
+    fun <A: Any> A?.ensureNotNull(error: () -> E): A? {
         if (this == null) _errors.add(error())
         return this
     }
 
-    fun <A : Any> A.ensure(condition: (A) -> Boolean, error: () -> E): A {
-        if (!condition(this)) _errors.add(error())
+    fun <A : Any> ensureNotNull(value: A?, error: () -> E): A {
+        if (value == null) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+        return value
+    }
+
+    fun <A : Any> ensureNotNull(value: () -> A?, error: () -> E): A {
+        val v = value()
+        if (v == null) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+        return v
+    }
+
+    fun <A : Any> demandNotNull(value: A?, error: () -> E) {
+        if (value == null) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+    }
+
+    fun <A : Any> demandNotNull(valueFn: () -> A?, error: () -> E) {
+        if (valueFn() == null) {
+            _errors.add(error())
+            throw ValidationException()
+        }
+    }
+
+    fun <A : Any> A.ensure(predicate: (A) -> Boolean, error: () -> E): A {
+        if (!predicate(this)) _errors.add(error())
         return this
     }
 
-    @JvmName("ensureNullable")
-    fun <A : Any> A?.ensure(condition: (A) -> Boolean, error: () -> E): A? {
-        if (this != null && !condition(this)) _errors.add(error())
+    @JvmName("ensureNullableFluent")
+    fun <A : Any> A?.ensure(predicate: (A) -> Boolean, error: () -> E): A? {
+        if (this != null && !predicate(this)) _errors.add(error())
         return this
     }
 
-
+    @JvmName("demandNotNullFluent")
+    @OptIn(ExperimentalContracts::class)
     fun <A : Any> A?.demandNotNull(error: () -> E): A {
+        contract { returns() implies (this@demandNotNull != null) }
         if (this == null) {
             _errors.add(error())
             throw ValidationException()
@@ -129,23 +168,23 @@ class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) 
         return this
     }
 
-    fun <A> A.demand(condition: (A) -> Boolean, error: () -> E): A {
-        if (!condition(this)) {
+    fun <A> A.demand(predicate: (A) -> Boolean, error: () -> E): A {
+        if (!predicate(this)) {
             _errors.add(error())
             throw ValidationException()
         }
         return this
     }
 
-    fun demand(condition: () -> Boolean, error: () -> E) {
-        if (!condition()) {
+    fun demand(predicate: () -> Boolean, error: () -> E) {
+        if (!predicate()) {
             _errors.add(error())
             throw ValidationException()
         }
     }
 
-    fun demand(condition: Boolean, error: () -> E) {
-        if (!condition) {
+    fun demand(predicate: Boolean, error: () -> E) {
+        if (!predicate) {
             _errors.add(error())
             throw ValidationException()
         }
