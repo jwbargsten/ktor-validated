@@ -236,37 +236,37 @@ class ValidatedTest : FunSpec({
     context("ValidationScope check") {
         test("check with true condition adds no errors") {
             val result = validate<String> {
-                check(true) { "Should not appear" }
+                ensure(true) { "Should not appear" }
             }
             result shouldBe Validated.unit()
         }
 
         test("check with false condition adds error") {
             val result = validate<String> {
-                check(false) { "Pikachu's level is too low" }
+                ensure(false) { "Pikachu's level is too low" }
             }
             result shouldBe Validated.invalidOne("Pikachu's level is too low")
         }
 
         test("check with lambda condition") {
             val result = validate<String> {
-                check({ 25 > 10 }) { "Level check failed" }
+                ensure({ 25 > 10 }) { "Level check failed" }
             }
             result shouldBe Validated.unit()
         }
 
         test("check with Validated") {
             val result = validate<String> {
-                check(Validated.invalidOne("Existing error"))
+                ensure(Validated.invalidOne("Existing error"))
             }
             result shouldBe Validated.invalidOne("Existing error")
         }
 
         test("multiple checks accumulate errors") {
             val result = validate {
-                check(false) { "Error 1: HP too low" }
-                check(true) { "Error 2: Should not appear" }
-                check(false) { "Error 3: PP depleted" }
+                ensure(false) { "Error 1: HP too low" }
+                ensure(true) { "Error 2: Should not appear" }
+                ensure(false) { "Error 3: PP depleted" }
             }
             result shouldBe invalid(listOf("Error 1: HP too low", "Error 3: PP depleted"))
         }
@@ -276,7 +276,7 @@ class ValidatedTest : FunSpec({
         test("checkNotNull with non-null returns value") {
             val result = validateWithResult<String, Pokemon> {
                 val pokemon: Pokemon? = Pokemon(25, "Pikachu", 50)
-                val checked = pokemon.checkNotNull { "Pokemon is null" }
+                val checked = pokemon.ensureNotNull { "Pokemon is null" }
                 checked!!
             }
             result shouldBe valid(Pokemon(25, "Pikachu", 50))
@@ -285,7 +285,7 @@ class ValidatedTest : FunSpec({
         test("checkNotNull with null adds error") {
             val result = validateWithResult<String, Pokemon?> {
                 val pokemon: Pokemon? = null
-                pokemon.checkNotNull { "No Pokemon found in party" }
+                pokemon.ensureNotNull { "No Pokemon found in party" }
             }
             result shouldBe Validated.invalid(listOf("No Pokemon found in party"))
         }
@@ -294,14 +294,14 @@ class ValidatedTest : FunSpec({
     context("ValidationScope value check extension") {
         test("check on value with passing condition") {
             val result = validateWithResult<String, Pokemon> {
-                Pokemon(25, "Pikachu", 50).check({ it.level > 10 }) { "Level too low" }
+                Pokemon(25, "Pikachu", 50).ensure({ it.level > 10 }) { "Level too low" }
             }
             result shouldBe valid(Pokemon(25, "Pikachu", 50))
         }
 
         test("check on value with failing condition") {
             val result = validateWithResult<String, Pokemon> {
-                Pokemon(25, "Pikachu", 5).check({ it.level > 10 }) { "Level too low to evolve" }
+                Pokemon(25, "Pikachu", 5).ensure({ it.level > 10 }) { "Level too low to evolve" }
             }
             result shouldBe Validated.invalid(listOf("Level too low to evolve"))
         }
@@ -309,7 +309,7 @@ class ValidatedTest : FunSpec({
         test("check on nullable with null skips check") {
             val result = validateWithResult<String, Pokemon?> {
                 val pokemon: Pokemon? = null
-                pokemon.check({ it.level > 10 }) { "Level too low" }
+                pokemon.ensure({ it.level > 10 }) { "Level too low" }
             }
             result shouldBe valid(null)
         }
@@ -317,7 +317,7 @@ class ValidatedTest : FunSpec({
         test("check on nullable with non-null checks condition") {
             val result = validateWithResult<String, Pokemon?> {
                 val pokemon: Pokemon? = Pokemon(25, "Pikachu", 5)
-                pokemon.check({ it.level > 10 }) { "Level too low" }
+                pokemon.ensure({ it.level > 10 }) { "Level too low" }
             }
             result shouldBe Validated.invalid(listOf("Level too low"))
         }
@@ -395,14 +395,14 @@ class ValidatedTest : FunSpec({
     context("ValidationScope checkValue") {
         test("checkValue with valid returns value") {
             val result = validateWithResult<String, Pokemon?> {
-                checkValue(valid(Pokemon(25, "Pikachu", 50)))
+                ensureValue(valid(Pokemon(25, "Pikachu", 50)))
             }
             result shouldBe valid(Pokemon(25, "Pikachu", 50))
         }
 
         test("checkValue with invalid adds errors and returns null") {
             val result = validateWithResult<String, Pokemon?> {
-                checkValue(Validated.invalid<String>(listOf("Error1", "Error2")))
+                ensureValue(Validated.invalid<String>(listOf("Error1", "Error2")))
             }
             result shouldBe Validated.invalid(listOf("Error1", "Error2"))
         }
@@ -431,16 +431,16 @@ class ValidatedTest : FunSpec({
     context("validate function") {
         test("validate with no errors returns unit") {
             val result = validate<String> {
-                check(true) { "No error" }
+                ensure(true) { "No error" }
             }
             result shouldBe Validated.unit()
         }
 
         test("validate accumulates all errors") {
             val result = validate<String> {
-                check(false) { "Badge 1 missing" }
-                check(false) { "Badge 2 missing" }
-                check(true) { "Badge 3 present" }
+                ensure(false) { "Badge 1 missing" }
+                ensure(false) { "Badge 2 missing" }
+                ensure(true) { "Badge 3 present" }
             }
             result shouldBe Validated.invalid(listOf("Badge 1 missing", "Badge 2 missing"))
         }
@@ -449,7 +449,7 @@ class ValidatedTest : FunSpec({
     context("validated function") {
         test("validated returns wrapped value on success") {
             val result = validateWithResult<String, Pokemon> {
-                check(true) { "No error" }
+                ensure(true) { "No error" }
                 Pokemon(94, "Gengar", 45)
             }
             result shouldBe valid(Pokemon(94, "Gengar", 45))
@@ -457,8 +457,8 @@ class ValidatedTest : FunSpec({
 
         test("validated returns errors on failure") {
             val result = validateWithResult<String, Pokemon> {
-                check(false) { "Ghost type needed" }
-                check(false) { "Level 25 required" }
+                ensure(false) { "Ghost type needed" }
+                ensure(false) { "Level 25 required" }
                 Pokemon(94, "Gengar", 45)
             }
             result shouldBe Validated.invalid(listOf("Ghost type needed", "Level 25 required"))
@@ -466,9 +466,9 @@ class ValidatedTest : FunSpec({
 
         test("validated short-circuits on demand failure") {
             val result = validateWithResult<String, Pokemon> {
-                check(false) { "First error collected" }
+                ensure(false) { "First error collected" }
                 demand(false) { "Demand failed - stops here" }
-                check(false) { "Never reached" }
+                ensure(false) { "Never reached" }
                 Pokemon(94, "Gengar", 45)
             }
             result shouldBe Validated.invalid(listOf("First error collected", "Demand failed - stops here"))
@@ -478,8 +478,8 @@ class ValidatedTest : FunSpec({
     context("errors property") {
         test("errors returns accumulated errors") {
             val result = validate<String> {
-                check(false) { "Pikachu fainted" }
-                check(false) { "Charmander fainted" }
+                ensure(false) { "Pikachu fainted" }
+                ensure(false) { "Charmander fainted" }
                 errors shouldBe listOf("Pikachu fainted", "Charmander fainted")
             }
             result shouldBe Validated.invalid(listOf("Pikachu fainted", "Charmander fainted"))

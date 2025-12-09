@@ -91,31 +91,31 @@ fun <E> validateAll(vararg validations: Validated<E, *>): Validated<E, Unit> {
 class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) {
     val errors: List<E> get() = _errors
 
-    fun check(condition: Boolean, error: () -> E) {
+    fun ensure(condition: Boolean, error: () -> E) {
         if (!condition) _errors.add(error())
     }
 
-    fun check(condition: () -> Boolean, error: () -> E) {
+    fun ensure(condition: () -> Boolean, error: () -> E) {
         if (!condition()) _errors.add(error())
     }
 
-    fun check(validation: Validated<E, *>) {
+    fun ensure(validation: Validated<E, *>) {
         if (validation is Validated.Invalid) _errors.addAll(validation.errors)
     }
 
 
-    fun <A> A?.checkNotNull(error: () -> E): A? {
+    fun <A> A?.ensureNotNull(error: () -> E): A? {
         if (this == null) _errors.add(error())
         return this
     }
 
-    fun <A : Any> A.check(condition: (A) -> Boolean, error: () -> E): A {
+    fun <A : Any> A.ensure(condition: (A) -> Boolean, error: () -> E): A {
         if (!condition(this)) _errors.add(error())
         return this
     }
 
-    @JvmName("checkNullable")
-    fun <A : Any> A?.check(condition: (A) -> Boolean, error: () -> E): A? {
+    @JvmName("ensureNullable")
+    fun <A : Any> A?.ensure(condition: (A) -> Boolean, error: () -> E): A? {
         if (this != null && !condition(this)) _errors.add(error())
         return this
     }
@@ -152,7 +152,7 @@ class ValidationScope<E>(private val _errors: MutableList<E> = mutableListOf()) 
     }
 
 
-    fun <A> checkValue(validated: Validated<E, A>): A? = when (validated) {
+    fun <A> ensureValue(validated: Validated<E, A>): A? = when (validated) {
         is Validated.Valid -> validated.value
         is Validated.Invalid -> {
             _errors.addAll(validated.errors)

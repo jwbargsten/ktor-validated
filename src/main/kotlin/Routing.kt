@@ -21,7 +21,7 @@ fun Application.configureRouting() {
 
             val body = call.receive<CustomerReq>()
             val customer = validateWithResult {
-                check(body.id > 0) { "error" }
+                ensure(body.id > 0) { "error" }
 
                 Customer(body.id, body.firstName, body.lastName)
             }
