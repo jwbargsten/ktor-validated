@@ -68,7 +68,7 @@ class ValidatedTest : FunSpec({
 
         test("flatMap chains validations") {
             val result = validPokemon.flatMap { pokemon ->
-                if (pokemon.level >= 16) valid(Pokemon(5, "Charmeleon", pokemon.level))
+                if (pokemon.level >= 116) valid(Pokemon(5, "Charmeleon", pokemon.level))
                 else invalidOne("Level too low to evolve")
             }
             result shouldBe invalidOne("Level too low to evolve")
@@ -78,7 +78,7 @@ class ValidatedTest : FunSpec({
             val result = validPokemon.flatMap { pokemon ->
                 valid(Pokemon(5, "Charmeleon", pokemon.level))
             }
-            result shouldBe valid(Pokemon(25, "Pikachu", 50))
+            result shouldBe valid(Pokemon(5, "Charmeleon", 50))
         }
 
         test("recover returns this") {
@@ -263,12 +263,12 @@ class ValidatedTest : FunSpec({
         }
 
         test("multiple checks accumulate errors") {
-            val result = validate<String> {
+            val result = validate {
                 check(false) { "Error 1: HP too low" }
                 check(true) { "Error 2: Should not appear" }
                 check(false) { "Error 3: PP depleted" }
             }
-            result shouldBe Validated.invalid(listOf("Error 1: HP too low", "Error 3: PP depleted"))
+            result shouldBe invalid(listOf("Error 1: HP too low", "Error 3: PP depleted"))
         }
     }
 
@@ -374,7 +374,7 @@ class ValidatedTest : FunSpec({
         test("demandNotNull with non-null continues") {
             val result = validated<String, Pokemon> {
                 val pokemon: Pokemon? = Pokemon(151, "Mew", 100)
-                demandNotNull(pokemon) { "Mew not found" }
+                pokemon.demandNotNull { "Mew not found" }
             }
             result shouldBe valid(Pokemon(151, "Mew", 100))
         }
